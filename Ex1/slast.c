@@ -1,74 +1,71 @@
 #include <stdio.h>
+#include <utmp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <time.h>
 
-#define SIZE 1024
-#define WTMP_FILE_PATH "/mnt/d/VisualStudio Projects/cpp/Advanced-Programming/Ex1/last_out.txt"
-#define OUTPUT_FILE_PATH "/mnt/d/VisualStudio Projects/cpp/Advanced-Programming/Ex1/output.txt"
-#define ASCII_MIN 31
-#define ASCII_MAX 127
 
-void execute_task(const int X) {
-    int fd_in = open(WTMP_FILE_PATH, O_RDONLY);
-    // 0666 (Octal base) read-write permissions
-    int fd_out = open(OUTPUT_FILE_PATH, O_CREAT|O_RDWR|O_TRUNC, 0666); // rw permissions
-    printf("fd_in: %d | fd_out %d\n", fd_in, fd_out);
+void show_entry(struct utmp *entry_p) {
 
-    if (fd_in < 0 || fd_out < 0) {
-        perror("File descriptor");
+    if (entry_p->ut_type == RUN_LVL) {
+        return; // Discard run_level system log in
     }
 
-    char buf[1];
-    int bytes_read, bytes_written;
-    
-    // Copy contents of 
-    while ((bytes_read = read(fd_in, &buf, 1)) > 0) {
-        // printf("%d bytes were read\n", bytes_read);
+    printf("%-8.8s | \t", entry_p->ut_name);
+    printf("%d | \t", entry_p->ut_type);
+    printf("%d | \t", entry_p->ut_pid);
 
-        if (buf[0] > ASCII_MIN && buf[0] < ASCII_MAX) {
-            if (buf[0] == 10) {
-                printf("\\n found\n");
-                bytes_written = write(fd_out, "\n", 1);
-            }
-            printf("Char: %d\n", buf[0]);
-            bytes_written = write(fd_out, &buf, 1);
-        }
-        // printf("%d bytes were written\n", bytes_written);
+    printf("%-8.8s | \t", entry_p->ut_id);
+
+    if (strcmp(entry_p->ut_line, "~") == 0) {
+        printf("system boot | \t");
     }
+
+    else {
+        printf("%-8.8s | \t", entry_p->ut_line);
+    }
+
+    printf("%-8.16s | \t", entry_p->ut_host);
+    printf("%-8.20s | \t", ctime(&entry_p->ut_time));
+    printf("\n--------------------------------------------\n");
 }
 
 
-
-
-
-
-
 int main(int argc, char* argv[]) {
-    printf("~~~~~lseek() tool~~~~~\n");
-    // This tool prints the last X lines from the ORIGINAL output
-    // of `last` command.
-    // The `last` command's output, is data from /var/log/wtmp file
 
 
-    // Input check:
     if (argc > 2 || argc == 1) {
-        printf("Usage: ./tool Integer\n");
-        exit(-1); // Input error
+        printf("Usage: ./slast integer\n");
+        exit(-1); // Bad input error code
     }
 
-    printf("arg[1] = %s\n", argv[1]);
-    
     int X = atoi(argv[1]);
-    if (X < 0) {
-        printf("Usage: ./tool Integer");
-        exit(-1);
+
+    if (X <= 0) {
+        printf("Usage: ./slast integer\n");
+        exit(-1); // Bad input error code
     }
 
-    // Start the tool:
-    execute_task(X); 
-    return 0;
+    int fd = open("/var/log/wtmp", O_RDONLY);
+
+    if (fd < 0) {
+        perror("File descriptor"); // Prints real error description using errno.h
+        exit(-2); // Bad file input
+    }
+
+    struct utmp current_record;
+
+    printf("Struct utmp size: %d\n", sizeof(current_record));
+
+    int size = sizeof(current_record);
+
+    while (read(fd, &current_record, size) == size) {
+        show_entry(&current_record);
+    }
+
+    printf("\n-----------------------\n Finished reading... \n----------------------------------\n");
+
 }
