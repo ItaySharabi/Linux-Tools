@@ -1,10 +1,13 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <utmp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
+#include <limits.h>
 #include <time.h>
 
 
@@ -29,13 +32,13 @@ int main(int argc, char* argv[]) {
 
 	if (argc > 2 || argc == 1) {
 	
-		printf("Usage: ./tool integer\n");
+		printf("Usage: ./slast integer\n");
 		exit(-1); // Bad input error code
 	}
 	
 	int X = atoi(argv[1]);
 	if (X < 0) {
-		printf("Bad input!\nUsage: ./tool integer\nYou have entered X=%d\n", X);
+		printf("Bad input!\nUsage: ./slast integer\nYou have entered X=%d\n", X);
 		exit(-1); // Bad input
 	}
 	
@@ -47,6 +50,11 @@ int main(int argc, char* argv[]) {
 		exit(-2); // Bad file input
 	}
 	
+	if (X == 0) {
+		// last -0 prints out all the records from the wtmp file
+		X = INT_MAX; 
+	}
+	
 	struct utmp current_record;
 	
 	size_t size = sizeof(current_record);
@@ -54,16 +62,16 @@ int main(int argc, char* argv[]) {
 	
 	int finished_reading = 0;
 	
-	while (X > 0 && offset >= 0) {
+	while (X > 0 && offset >= 0) { 
 	
 		read(fd, &current_record, size);
-		if (current_record.ut_type != RUN_LVL) {
+		if (current_record.ut_type != RUN_LVL) { // Root-lvl records are discarded.
 			show_entry(&current_record);
 			X--;
 		}
 		offset = lseek(fd, -2*size, SEEK_CUR); // Move 2 time the size of the utmp struct
 		
-		if (offset <= size) { 
+		if (offset <= size) { // if we hit the last utmp record:
 			finished_reading = 1;
 		}
 	}
