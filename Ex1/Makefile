@@ -1,8 +1,7 @@
-solution: slast.o
-	gcc -o solution slast.o
+all: slast
 
-solution.o: slast.c
-	gcc slast.c 
+slast: slast.c
+	gcc slast.c -o slast 
 
 clean: 
-	rm -f *.o solution
+	rm -f *.o slast
