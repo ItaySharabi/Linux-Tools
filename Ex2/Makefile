@@ -9,6 +9,6 @@ ftw2: ftw2.c
 	gcc ftw2.c -o ftw2
 
 tree: MyTree.c
-	gcc MyTree.c -o tree
+	gcc MyTree.c -o main
 clean:
-	rm -f ftw1 ftw2 tree *.o
+	rm -f ftw1 ftw2 main *.o
