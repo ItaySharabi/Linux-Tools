@@ -65,6 +65,20 @@ int count_files = 0;
 // is input equal to current working directory (cwd)
 int input_was_pwd = 0;
 
+
+/**
+ * print_entry(4) Main method prints out file records just like the tool `tree` with the option -pugs
+ * -pugs is a pattern: p-pattern , u - user ,  g - group ,  s - size of file. 
+ * 
+ * Traverse and print out all file records in the file-system (starting from the input file-path or cwd)
+ * printing the information in the same pattern as in the `tree` tool.
+ * 
+ * @param file_path: The path of the current explored file.
+ * @param status: stat structure pointer - containing infromation about the file which comes from invoking `stat` 
+ *                with `file_path` as input
+ * @param type: Integer representing the file's type
+ * @param entry_ptr: FTW(File Tree Walk) Structure - Contains file's heirarchy information relatively to the current ftw.
+ * */
 int print_entry(const char *file_path, const struct stat *status, int type, struct FTW *entry_ptr) {
 
     if (is_hidden_path(file_path)) {
@@ -86,12 +100,6 @@ int print_entry(const char *file_path, const struct stat *status, int type, stru
         count_dirs++;
     }
 
-    // else if (strcmp(file_path, ".") == 0) {
-    //     // If current directory is `.` - add it to the counter to fix the count
-    //     printf("dwdawdhaukwdhbawd %s\n", file_path);
-    //     count_dirs++;
-    // }
-
     if (type == FTW_F) {
         count_files++;
         dir = 0;
@@ -111,8 +119,8 @@ int print_entry(const char *file_path, const struct stat *status, int type, stru
 
         // File permissions:
         mode_t mode = status->st_mode;
-
         char permissions[10];
+
         permissions[0] = type == FTW_F ? '-' : 'd';
         permissions[1] = mode & S_IRUSR ? 'r' : '-';
         permissions[2] = mode & S_IWUSR ? 'w' : '-';
@@ -128,9 +136,9 @@ int print_entry(const char *file_path, const struct stat *status, int type, stru
         char filename_buf[path_size];
         get_name(file_path, filename_buf);
 
-        // get level of indentation
+        // Get file depth relative to starting directory
         int depth = entry_ptr->level;
-        // printf("FTW is now at level: %d\n", level);
+
         if (depth == 0) {
             printf("%s\n", file_path);
             return 0;
@@ -161,14 +169,14 @@ int main(int argc, char *argv[]) {
         // pwd and pwd/
         char *pwd;
         char buf[SIZE];
-        char postfix[2];
-        postfix[0] = '/';
+        char seperator[2];
+        seperator[0] = '/';
         pwd = getcwd(buf, SIZE); // pwd
         int size = strlen(pwd);
         char pwd2[size+1];       // pwd/
         memset(pwd2, '\0', size);
         strncat(pwd2, pwd, size);
-        strncat(pwd2, postfix, strlen(postfix));
+        strncat(pwd2, seperator, strlen(seperator));
 
         // printf("pwd: %s\npwd2: %s\nargv[1]: %s\n", pwd, pwd2, argv[1]);
 
@@ -177,14 +185,11 @@ int main(int argc, char *argv[]) {
             // If so - use `.` instead of the full directory path.
             input_was_pwd = 1;
             if (nftw(".", print_entry, 1, flags) == -1) {
-                // // printf("%s", argv[1]);
-                // perror("asdawd[error opening dir]");
                 printf("%s [error opening dir]\n", argv[1]);
                 printf("\n%d directories, %d files\n", 0, 0);
             
                 exit(-1);
             }
-            // nftw(".", print_entry, 1, flags);
         }
         
         else {
@@ -193,7 +198,6 @@ int main(int argc, char *argv[]) {
                 printf("\n%d directories, %d files\n", 0, 0);
                 exit(-1);
             }
-            // nftw(argv[1], print_entry, 1, flags);
         }
     }
 
@@ -202,7 +206,7 @@ int main(int argc, char *argv[]) {
 
         printf("input was NOT pwd!\n");
     }
-    // Final tree -pugs output. Add +2 to directories count only if given input was NOT current working directory! 
-    printf("\n%d directories, %d files\n", input_was_pwd ? count_dirs : count_dirs + 1, count_files);
+    // Final tree -pugs output. Add +1 to directories count only if given input was NOT current working directory! 
+    printf("\n%d directories, %d files\n", count_dirs, count_files);
     return 0;
 }
