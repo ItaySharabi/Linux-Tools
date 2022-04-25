@@ -1,0 +1,92 @@
+#!bin/bash
+
+
+# ./stree > out.txt;
+# tree -pugs >> out.txt;
+# grep directories out.txt;
+
+
+# ./stree > out.txt; 
+# tree -pugs >> out.txt;
+# grep directories out.txt;
+clear;
+
+echo "==============================================";
+echo "TEST";
+echo "==============================================";
+./stree > out.txt; 
+tree -pugs >> out.txt;
+grep directories out.txt;
+
+
+echo "==============================================";
+echo "TEST /home/ubuntu/Desktop/test/Linux-Tools/Ex2";
+echo "==============================================";
+./stree /home/ubuntu/Desktop/test/Linux-Tools/Ex2 > out.txt; 
+tree -pugs /home/ubuntu/Desktop/test/Linux-Tools/Ex2 >> out.txt;
+grep directories out.txt;
+
+
+echo "==============================================";
+echo "TEST /home/ubuntu/Desktop/test/Linux-Tools/Ex2/";
+echo "==============================================";
+./stree /home/ubuntu/Desktop/test/Linux-Tools/Ex2/ > out.txt; 
+tree -pugs /home/ubuntu/Desktop/test/Linux-Tools/Ex2/  >> out.txt;
+grep directories out.txt;
+
+echo "==============================================";
+echo "TEST /home/";
+echo "==============================================";
+./stree /home/ > out.txt; 
+tree -pugs /home/  >> out.txt;
+grep directories out.txt;
+
+echo "==============================================";
+echo "TEST /home/ubuntu";
+echo "==============================================";
+./stree "/home/ubuntu" > out.txt; 
+tree -pugs "/home/ubuntu" >> out.txt;
+grep directories out.txt;
+
+echo "==============================================";
+echo "TEST /home/ubuntu/Desktop";
+echo "==============================================";
+./stree /home/ubuntu/Desktop > out.txt; 
+tree -pugs /home/ubuntu/Desktop  >> out.txt;
+grep directories out.txt;
+
+echo "==============================================";
+echo "TEST /home/ubuntu/Desktop/";
+echo "==============================================";
+./stree /home/ubuntu/Desktop/ > out.txt; 
+tree -pugs /home/ubuntu/Desktop/  >> out.txt;
+grep directories out.txt;
+
+
+echo "==============================================";
+echo "TEST /home/ubuntu/Desktop/test//";
+echo "==============================================";
+./stree /home/ubuntu/Desktop/test// > out.txt; 
+tree -pugs /home/ubuntu/Desktop/test// >> out.txt;
+grep directories out.txt;
+
+echo "==============================================";
+echo "TEST ~";
+echo "==============================================";
+./stree ~ > out.txt; 
+tree -pugs ~ >> out.txt;
+grep directories out.txt;
+
+echo "==============================================";
+echo "TEST .";
+echo "==============================================";
+./stree . > out.txt; 
+tree -pugs . >> out.txt;
+grep directories out.txt;
+
+echo "==============================================";
+echo "TEST /home/ubuntu/Desktop/test/Linux-Tools/Ex1";
+echo "==============================================";
+./stree /home/ubuntu/Desktop/test/Linux-Tools/Ex1 > out.txt; 
+tree -pugs /home/ubuntu/Desktop/test/Linux-Tools/Ex1 >> out.txt;
+grep directories out.txt;

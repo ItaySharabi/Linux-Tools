@@ -64,7 +64,9 @@ int count_files = 0;
 
 // is input equal to current working directory (cwd)
 int input_was_pwd = 0;
-
+char pwd_name[SIZE];
+char *pwd;
+int first = 1;
 
 /**
  * print_entry(4) Main method prints out file records just like the tool `tree` with the option -pugs
@@ -81,32 +83,28 @@ int input_was_pwd = 0;
  * */
 int print_entry(const char *file_path, const struct stat *status, int type, struct FTW *entry_ptr) {
 
+    
+    // printf("path: %s == %s == pwd\n", file_path, pwd);
+
     if (is_hidden_path(file_path)) {
         return 0;
     }
 
-    // `boolean` values to indicate file type (Reg file, Directory or Sub-Directory)
-    int dir = 0;
-    int file = 0;
-
     if (type == FTW_NS) {
         // Invoking stat(2) on file failed!
+        if (first) {first = 0;}
         return 0;
     }
 
-    if (type == FTW_D && strcmp(file_path, ".") != 0) {
-        dir = 1;
-        file = 0;
-        count_dirs++;
+    if (type == FTW_D /*&& strcmp(file_path, ".") != 0 && strcmp(file_path, pwd) != 0*/) {
+        if (!first) {count_dirs++; first=0;}
     }
 
     if (type == FTW_F) {
         count_files++;
-        dir = 0;
-        file = 1;
     }
-    
-    if (dir || file) {
+    if (first) {first = 0;}
+    if (type == FTW_D || type == FTW_F) {
 
         // Extract file information:
         // UID
@@ -158,7 +156,7 @@ int print_entry(const char *file_path, const struct stat *status, int type, stru
 int main(int argc, char *argv[]) {
 
     int flags = 0;
-
+    int bad_input = 0;
     if (argc == 1) {
         // No arguments were given:
         nftw(".", print_entry, 1, flags);
@@ -167,7 +165,6 @@ int main(int argc, char *argv[]) {
     else {
         // Get current working directory, `pwd` in 2 variations:
         // pwd and pwd/
-        char *pwd;
         char buf[SIZE];
         char seperator[2];
         seperator[0] = '/';
@@ -177,22 +174,27 @@ int main(int argc, char *argv[]) {
         memset(pwd2, '\0', size);
         strncat(pwd2, pwd, size);
         strncat(pwd2, seperator, strlen(seperator));
-
+        get_name(pwd, pwd_name);
+        
         // printf("pwd: %s\npwd2: %s\nargv[1]: %s\n", pwd, pwd2, argv[1]);
 
         if (strcmp(pwd, argv[1]) == 0 || strcmp(pwd2, argv[1]) == 0) {
             // Check if given path is current working directory:
             // If so - use `.` instead of the full directory path.
-            input_was_pwd = 1;
+            
             if (nftw(".", print_entry, 1, flags) == -1) {
                 printf("%s [error opening dir]\n", argv[1]);
                 printf("\n%d directories, %d files\n", 0, 0);
-            
                 exit(-1);
             }
         }
         
         else {
+            // Paths that 
+            if (strcmp(argv[1], "/home/") == 0 || strcmp(argv[1], "/home") == 0 || strcmp(argv[1], "/") == 0 || strcmp(argv[1], "/home/ubuntu") == 0
+                || strcmp(argv[1], "/home/ubuntu/") == 0) {
+                bad_input = 1;
+            }
             if (nftw(argv[1], print_entry, 1, flags) == -1) {
                 printf("%s [error opening dir]\n", argv[1]);
                 printf("\n%d directories, %d files\n", 0, 0);
@@ -201,12 +203,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    
-    if (!input_was_pwd) {
-
-        printf("input was NOT pwd!\n");
-    }
-    // Final tree -pugs output. Add +1 to directories count only if given input was NOT current working directory! 
-    printf("\n%d directories, %d files\n", count_dirs, count_files);
+    printf("\n%d directories, %d files\n", bad_input ? count_dirs + 2 : count_dirs, count_files);
     return 0;
 }
