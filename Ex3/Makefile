@@ -1,5 +1,5 @@
 
-all: shell2 # shell1 shell3
+all: Shell shell2 # shell1 shell3
 
 Shell:
 	gcc -o MyShell Shell.c

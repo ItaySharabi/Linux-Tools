@@ -25,7 +25,7 @@ int main() {
     int status_last;
     char *token;
     char *outfile;
-    int i, fd, amper, piping, redirect_STD_OUT = 0, redirect_STD_ERR = 0, retid, status, argc1;
+    int i, fd, append = 0, amper = 0, piping = 0, redirection = 0, redirect_STD_OUT = 0, redirect_STD_ERR = 0, retid = 0, status = 0, argc1 = 0;
     char prompt[1024] = "hello";
     int fildes[2];
     char *argv1[10];
@@ -35,7 +35,18 @@ int main() {
     signal(SIGINT, sig_handler);
 
     while (1) {
-        printf("piping(|) | amper(&) | redirection(>) | redirection(>>) | \n");
+        printf("===========================================================\n");
+        printf("piping(|) | amper(&) | redirection(>) |     command      | \n");
+        printf("===========================================================\n");
+        printf("   %d      |    %d    |       %d        |        %s        | \n", piping, amper, redirect_STD_ERR || redirect_STD_OUT, command);
+        printf("===========================================================\n");
+
+        printf("===========================================================\n");
+        printf("retid      | status   |    outfile       |      argc1        | \n");
+        printf("===========================================================\n");
+        printf("   %d      |    %d    |       %s        |        %d        | \n", retid, status, outfile , argc1);
+        printf("===========================================================\n");
+
         printf("%s: ", prompt);
         fgets(command, 1024, stdin);
         // printf("Command: %s\n\n", command);
@@ -94,7 +105,7 @@ int main() {
             amper = 0; 
 
         /* Redirections */
-
+        /* Write / Truncate */
         if (i > 1 && !strcmp(argv1[i - 2], ">")) {
             // printf("i = %d, argv[i - 2] = %s, \n%s\n", i, argv[i-2], command);
             redirect_STD_OUT = 1;
@@ -103,6 +114,20 @@ int main() {
         }
         else {
             redirect_STD_OUT = 0;
+            redirection = 0;
+        }
+
+        /* Write / Append */
+        if (i > 1 && !strcmp(argv1[i - 2], ">>")) {
+            // printf("i = %d, argv[i - 2] = %s, \n%s\n", i, argv[i-2], command);
+            redirect_STD_OUT = 1;
+            append = 1;
+            argv1[i - 2] = NULL;
+            outfile = argv1[i - 1];
+        }
+        else {
+            redirect_STD_OUT = 0;
+            redirection = 0;
         }
 
         /* for commands not part of the shell command language */ 
@@ -120,6 +145,7 @@ int main() {
         }
         else {
             redirect_STD_ERR = 0;
+            redirection = 0;
         }
 
         
@@ -132,7 +158,8 @@ int main() {
             continue;
         }
         
-        if (fork() == 0) { 
+        int child_pid = fork();
+        if (child_pid == 0) {
             /* redirection of IO*/
             if (redirect_STD_OUT) {
                 fd = creat(outfile, 0660); 
@@ -149,7 +176,9 @@ int main() {
                 /* stderr is now redirected */
             }
             
-            if (piping) {
+        if (piping) {
+            printf("Piping...\n");
+            // printf("fildes: %s\n", fildes);
             pipe (fildes);
             if (fork() == 0) { 
                 /* first component of command line */ 
@@ -167,10 +196,16 @@ int main() {
             close(fildes[0]); 
             close(fildes[1]); 
             /* standard input now comes from pipe */ 
-            execvp(argv2[0], argv2);
+            if (execvp(argv2[0], argv2)) {
+                // exit(-2); // Error in executing command while piping
+            }
         } 
         else
-            execvp(argv1[0], argv1);
+            if (execvp(argv1[0], argv1) == -1) {
+                exit(-1); // Error in executing command
+            }
+        } else if (child_pid < 0) {
+            printf("fork() failed!\n");
         }
         /* parent continues here */
         if (amper == 0) {
