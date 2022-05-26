@@ -6,19 +6,24 @@
 #include "stdlib.h"
 #include "unistd.h"
 #include <string.h>
+void sig_handler(int sig) {
+    printf("You've pressed Ctrl+C!\nType `quit` to quit the shell\n");
+}
+
 
 int main() {
 char command[1024];
 char *token;
 int i;
 char *outfile;
-int fd, amper, redirect, piping, retid, status, argc1;
+int fd, amper, redirect_STD_OUT = 0, redirect_STD_ERR = 0, piping, retid, status, argc1;
 int fildes[2];
+char prompt[1024] = "hello";
 char *argv1[10], *argv2[10];
 
 while (1)
 {
-    printf("hello: ");
+    printf("%s: ", prompt);
     fgets(command, 1024, stdin);
     command[strlen(command) - 1] = '\0';
     piping = 0;
@@ -64,18 +69,18 @@ while (1)
         amper = 0; 
 
     if (argc1 > 1 && ! strcmp(argv1[argc1 - 2], ">")) {
-        redirect = 1;
+        redirect_STD_OUT = 1;
         argv1[argc1 - 2] = NULL;
         outfile = argv1[argc1 - 1];
         }
     else 
-        redirect = 0; 
+        redirect_STD_OUT = 0; 
 
     /* for commands not part of the shell command language */ 
 
     if (fork() == 0) { 
         /* redirection of IO ? */
-        if (redirect) {
+        if (redirect_STD_OUT) {
             fd = creat(outfile, 0660); 
             close (STDOUT_FILENO) ; 
             dup(fd); 
