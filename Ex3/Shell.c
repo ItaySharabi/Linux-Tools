@@ -9,6 +9,7 @@
 #include <string.h>
 
 void sig_handler(int sig) {
+    printf("test: %d\n", sig);
     printf("You've pressed Ctrl+C!\nType `quit` to quit the shell\n");
 }
 
@@ -28,11 +29,18 @@ int main() {
     int i, fd, append = 0, amper = 0, piping = 0, redirection = 0, redirect_STD_OUT = 0, redirect_STD_ERR = 0, retid = 0, status = 0, argc1 = 0;
     char prompt[1024] = "hello";
     int fildes[2];
+
+    // char *argv[10];
+
+    // argv = (char*)malloc(10);
+
     char *argv1[10];
     char *argv2[10];
 
+    
     // Assign a signal handler
     signal(SIGINT, sig_handler);
+    // signal(, sig_handler);
 
     while (1) {
         printf("===========================================================\n");
@@ -49,9 +57,8 @@ int main() {
 
         printf("%s: ", prompt);
         fgets(command, 1024, stdin);
-
+        int n = 0;
         command[strlen(command) - 1] = '\0';
-        printf("Command: %s\n", command);
         piping = 0;
         // Store last command
         copy_into(command, command_cpy);
@@ -68,27 +75,32 @@ int main() {
                 break;
             }
         }
-        argv1[i] = NULL;
+        argv1[i] = NULL; // i = 3 for [ls -l | grep 26]
         argc1 = i;
-        
+
+
         /* Is command empty */
         if (argv1[0] == NULL)
             continue;
+        
 
         /* Does command contain pipe */
         if (piping) {
             i = 0;
-            while (token!= NULL)
+            while (token != NULL)
             {
+                // ls -l | grep 26 | grep 12
+                // argv2 = {"grep", "26", }
                 token = strtok (NULL, " ");
                 argv2[i] = token;
                 i++;
                 if (token && ! strcmp(token, "|")) {
                     piping++;
+                    // argv2[i] = NULL;
+                    // *(argv_n + (n++)) = argv2;
                     break;
                 }
             }
-            
             argv2[i] = NULL;
         }
         if (piping > 1) {
@@ -106,7 +118,6 @@ int main() {
             amper = 1;
             argv1[argc1 - 1] = NULL;
         }
-
         else 
             amper = 0; 
 
@@ -172,67 +183,81 @@ int main() {
             argv1[i - 1] = NULL;
             continue;
         }
+        // Save last command, which is about to be executed
         copy_into(command_cpy, command_last);
-        int child_pid = fork();
-        if (child_pid == 0) {
+        int second_proc_pid = fork();
+        if (second_proc_pid == 0) {
+            // ls -l | *grep 26*
             /* redirection of IO*/
             if (redirect_STD_OUT) {
+                printf("redirecting to > %s\n", outfile);
                 if (append) {
                     printf("outfile: %s\n", outfile);
                     fd = open(outfile, O_CREAT | O_APPEND | O_RDWR, 0660);
                 }
                 else {
-                    fd = creat(outfile, 0660); 
+                    // fd = creat(outfile, 0660); 
+                    fd = open(outfile, O_CREAT | O_TRUNC | O_RDWR, 0660);
                 }
-                close (STDOUT_FILENO);
-                dup(fd);
+                close(STDOUT_FILENO);
+                dup(fd); // Duplicate fd into stdout
                 close(fd);
                 /* stdout is now redirected */
             }
             else if (redirect_STD_ERR) {
                 fd = creat(outfile, 0660); 
                 close (STDERR_FILENO);
-                dup(fd);
+                dup(fd); // Duplicate fd into stdin
                 close(fd);
                 /* stderr is now redirected */
             }
             
-        if (piping) {
-            printf("Piping...\n");
-            // printf("fildes: %s\n", fildes);
-            pipe (fildes);
-            if (fork() == 0) { 
-                /* first component of command line */ 
-                close(STDOUT_FILENO); 
-                dup(fildes[1]); 
-                close(fildes[1]); 
-                close(fildes[0]); 
-                /* stdout now goes to pipe */ 
-                /* child process does command */ 
-                execvp(argv1[0], argv1);
+            if (piping) {
+                // i = ??
+                printf("Piping...\n");
+                while (piping > 0) {
+                    // argv1 = something;
+                    // argv2 = something;
+                    printf("Piping #%d(=n)\n", n++);
+                    if (pipe(fildes) == -1) {
+                        perror("Pipe:");
+                    }
+                    int first_proc_pid = fork();
+                    if (first_proc_pid == 0) {
+                        /* first component of command line */ 
+                        printf("first child process\n");
+                        close(STDOUT_FILENO); // 1
+                        /* Duplicate the output side of pipe to stdout */
+                        dup(fildes[1]);
+                        printf("pipeline fd duplicated to stdout!\n");
+                        printf("fildes[0]: %d\n", fildes[0]);
+                        printf("fildes[1]: %d\n", fildes[1]);
+                        close(fildes[1]);
+                        close(fildes[0]);
+                        /* stdout now goes to pipe */ 
+                        /* child process does command */ 
+                        execvp(argv1[0], argv1);
+                    } 
+                    /* 2nd command component of command line */ 
+                    close(STDIN_FILENO); // 0
+                    /* Duplicate the input side of pipe to stdin */
+                    dup(fildes[0]);
+                    close(fildes[0]); 
+                    close(fildes[1]); 
+                    /* standard input now comes from pipe */ 
+                    execvp(argv2[0], argv2);
+                    piping--;
+                    // Two programs finished executing 
+                    // while the first redirected its output
+                    // to the second
+                }
             } 
-            /* 2nd command component of command line */ 
-            close(STDIN_FILENO);
-            dup(fildes[0]);
-            close(fildes[0]); 
-            close(fildes[1]); 
-            /* standard input now comes from pipe */ 
-            if (execvp(argv2[0], argv2)) {
-                // exit(-2); // Error in executing command while piping
-            }
-        } 
-        else
-            if (execvp(argv1[0], argv1) == -1) {
-                exit(-1); // Error in executing command
-            }
-        } else if (child_pid < 0) {
-            printf("fork() failed!\n");
+            // Else, if not piping, code reaches here:
+            execvp(argv1[0], argv1);
         }
-        /* parent continues here */
+        /* parent continues here */ // &
         if (amper == 0) {
             retid = wait(&status);
-            // printf("retid: %d\n", retid);
-            // printf("status: %d\n", status);
         }
     }
 }
