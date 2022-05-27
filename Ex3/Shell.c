@@ -49,24 +49,22 @@ int main() {
 
         printf("%s: ", prompt);
         fgets(command, 1024, stdin);
-        // printf("Command: %s\n\n", command);
+
         command[strlen(command) - 1] = '\0';
+        printf("Command: %s\n", command);
         piping = 0;
-        // printf("Last command: %s\n", command_last);
         // Store last command
         copy_into(command, command_cpy);
-        // memset(command_cpy, '\0', 1024);
-        // strncpy(command_cpy, command, strlen(command));
         /* parse command line */
         i = 0;
         token = strtok(command," ");
         while (token != NULL) {
-            // printf("Token: %s\n", token);
+            printf("Token: %s\n", token);
             argv1[i] = token;
             token = strtok (NULL, " ");
             i++;
             if (token && ! strcmp(token, "|")) {
-                piping = 1;
+                piping++;
                 break;
             }
         }
@@ -85,8 +83,16 @@ int main() {
                 token = strtok (NULL, " ");
                 argv2[i] = token;
                 i++;
+                if (token && ! strcmp(token, "|")) {
+                    piping++;
+                    break;
+                }
             }
+            
             argv2[i] = NULL;
+        }
+        if (piping > 1) {
+            printf("Handle multiple piping commands:\n%s\n", command_cpy);
         }
 
         if (! strcmp(argv1[0], "quit")) {
@@ -137,6 +143,15 @@ int main() {
             continue;
         }
 
+        if (!strcmp(argv1[0], "!!")) {
+            printf("Executing last command (%s)\n", command_last);
+            memset(command, '\0', 1024);
+            int size = strlen(command_cpy);
+            for (int i = 0; i < size; ++i) {
+                command[i] = command_cpy[i];
+            }
+        }
+
         if (argv1[i - 2] != NULL && ! strcmp(argv1[i - 2], "2>")) {
             redirect_STD_ERR = 1;
             argv1[i - 2] = NULL;
@@ -157,12 +172,18 @@ int main() {
             argv1[i - 1] = NULL;
             continue;
         }
-        
+        copy_into(command_cpy, command_last);
         int child_pid = fork();
         if (child_pid == 0) {
             /* redirection of IO*/
             if (redirect_STD_OUT) {
-                fd = creat(outfile, 0660); 
+                if (append) {
+                    printf("outfile: %s\n", outfile);
+                    fd = open(outfile, O_CREAT | O_APPEND | O_RDWR, 0660);
+                }
+                else {
+                    fd = creat(outfile, 0660); 
+                }
                 close (STDOUT_FILENO);
                 dup(fd);
                 close(fd);
